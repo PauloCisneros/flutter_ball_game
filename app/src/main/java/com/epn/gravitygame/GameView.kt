@@ -28,6 +28,8 @@ class GameView(context: Context) : View(context) {
     private var gameOver = false
     private var scoreFlash = 0
 
+    private val effects = mutableListOf<ImpactEffect>()
+
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -110,9 +112,16 @@ class GameView(context: Context) : View(context) {
 
         obstacles.forEach { obstacle ->
             if (Collision.circleWithRect(ball.position, ball.radius(), obstacle.rect)) {
+
+                // Efecto de impacto
+                effects.add(
+                    ImpactEffect(ball.position.x, ball.position.y)
+                )
+
                 lives--
                 ball.position.set(width / 2f, height / 2f)
                 vibrate(120)
+
                 if (lives <= 0) {
                     gameOver = true
                 }
@@ -135,6 +144,8 @@ class GameView(context: Context) : View(context) {
                 }
             }
         }
+        effects.forEach { it.update() }
+        effects.removeAll { !it.alive }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -146,6 +157,7 @@ class GameView(context: Context) : View(context) {
         blinkingObstacles.forEach {
             it.draw(canvas)
         }
+        effects.forEach { it.draw(canvas) }
         ball.draw(canvas)
 
         if (!started) drawStartOverlay(canvas)
@@ -168,7 +180,7 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun drawHeader(canvas: Canvas) {
-        // Panel superior más alto
+
         canvas.drawRoundRect(
             24f, 24f,
             width - 24f, 160f,
@@ -176,7 +188,6 @@ class GameView(context: Context) : View(context) {
             panelPaint
         )
 
-        // Título
         canvas.drawText(
             "Gravity Ball",
             48f,
@@ -184,7 +195,14 @@ class GameView(context: Context) : View(context) {
             titlePaint
         )
 
-        // Puntaje destacado
+        // ⭐ efecto score flash AQUÍ (antes de dibujar)
+        if (scoreFlash > 0) {
+            textPaint.color = Color.YELLOW
+            scoreFlash--
+        } else {
+            textPaint.color = Color.WHITE
+        }
+
         canvas.drawText(
             "⭐ $score",
             48f,
@@ -192,7 +210,6 @@ class GameView(context: Context) : View(context) {
             textPaint
         )
 
-        // Vidas a la derecha
         canvas.drawText(
             "❤️ $lives",
             width - 160f,
@@ -200,20 +217,12 @@ class GameView(context: Context) : View(context) {
             textPaint
         )
 
-        // Sensor (debug más pequeño)
         canvas.drawText(
             "X:${sensorX.roundToInt()}  Y:${sensorY.roundToInt()}",
             width - 280f,
             155f,
             smallPaint
         )
-
-        if (scoreFlash > 0) {
-            textPaint.color = Color.YELLOW
-            scoreFlash--
-        } else {
-            textPaint.color = Color.WHITE
-        }
     }
 
     private fun drawStartOverlay(canvas: Canvas) {
