@@ -14,6 +14,14 @@ import kotlin.math.roundToInt
 
 class GameView(context: Context) : View(context) {
 
+    private enum class GameState {
+        MENU,
+        PLAYING,
+        GAME_OVER
+    }
+
+    private var state = GameState.MENU
+
     private val ball = Ball()
     private val target = Target()
     private val obstacles = mutableListOf<Obstacle>()
@@ -58,7 +66,7 @@ class GameView(context: Context) : View(context) {
     }
 
     fun updateSensorValues(x: Float, y: Float) {
-        if (!started || gameOver) return
+        if (state != GameState.PLAYING) return
         sensorX = x
         sensorY = y
         updateGame()
@@ -75,9 +83,13 @@ class GameView(context: Context) : View(context) {
         lives = 3
         gameOver = false
         started = false
+
         ball.position.set(width / 2f, height / 2f)
         target.relocate(width, height)
+
         createObstacles()
+
+        state = GameState.MENU
         invalidate()
     }
 
@@ -123,7 +135,7 @@ class GameView(context: Context) : View(context) {
                 vibrate(120)
 
                 if (lives <= 0) {
-                    gameOver = true
+                    state = GameState.GAME_OVER
                 }
                 return@forEach
             }
@@ -150,18 +162,28 @@ class GameView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
         drawBackground(canvas)
         drawHeader(canvas)
-        target.draw(canvas)
-        obstacles.forEach { it.draw(canvas) }
-        blinkingObstacles.forEach {
-            it.draw(canvas)
-        }
-        effects.forEach { it.draw(canvas) }
-        ball.draw(canvas)
 
-        if (!started) drawStartOverlay(canvas)
-        if (gameOver) drawGameOver(canvas)
+        when (state) {
+
+            GameState.MENU -> {
+                drawMenu(canvas)
+            }
+
+            GameState.PLAYING -> {
+                target.draw(canvas)
+                obstacles.forEach { it.draw(canvas) }
+                blinkingObstacles.forEach { it.draw(canvas) }
+                effects.forEach { it.draw(canvas) }
+                ball.draw(canvas)
+            }
+
+            GameState.GAME_OVER -> {
+                drawGameOver(canvas)
+            }
+        }
     }
 
     private fun drawBackground(canvas: Canvas) {
@@ -270,11 +292,25 @@ class GameView(context: Context) : View(context) {
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_DOWN) {
-            if (gameOver) {
-                resetGame()
-            } else {
-                started = true
+
+            when (state) {
+
+                GameState.MENU -> {
+                    state = GameState.PLAYING
+                    started = true
+                }
+
+                GameState.GAME_OVER -> {
+                    resetGame()
+                    state = GameState.PLAYING
+                    started = true
+                }
+
+                GameState.PLAYING -> {
+                    // nada
+                }
             }
+
             invalidate()
             return true
         }
@@ -288,5 +324,38 @@ class GameView(context: Context) : View(context) {
             @Suppress("DEPRECATION")
             vibrator.vibrate(milliseconds)
         }
+    }
+
+    private fun drawMenu(canvas: Canvas) {
+        val box = RectF(60f, height * 0.25f, width - 60f, height * 0.65f)
+        canvas.drawRoundRect(box, 36f, 36f, panelPaint)
+
+        canvas.drawText(
+            "Gravity Ball",
+            box.left + 50f,
+            box.top + 100f,
+            titlePaint
+        )
+
+        canvas.drawText(
+            "Inclina el dispositivo para mover la bola",
+            box.left + 50f,
+            box.top + 180f,
+            textPaint
+        )
+
+        canvas.drawText(
+            "Evita obstáculos y recoge objetivos",
+            box.left + 50f,
+            box.top + 230f,
+            textPaint
+        )
+
+        canvas.drawText(
+            "Toca para comenzar",
+            box.left + 50f,
+            box.top + 320f,
+            titlePaint
+        )
     }
 }
