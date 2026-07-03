@@ -20,6 +20,11 @@ class GameView(context: Context) : View(context) {
         GAME_OVER
     }
 
+    enum class ShapeType {
+        RECT,
+        TRIANGLE
+    }
+
     private var state = GameState.MENU
 
     private val ball = Ball()
@@ -118,7 +123,12 @@ class GameView(context: Context) : View(context) {
         val o2 = Obstacle(RectF(width * 0.55f, height * 0.55f, width * 0.86f, height * 0.60f))
         val o3 = Obstacle(RectF(width * 0.25f, height * 0.73f, width * 0.62f, height * 0.78f))
 
-        val blink = RectF(width * 0.40f, height * 0.45f, width * 0.70f, height * 0.50f)
+        val blink = RectF(
+            width * 0.40f,
+            height * 0.45f,
+            width * 0.70f,
+            height * 0.50f
+        )
 
         // normales
         listOf(o1, o2, o3).forEach {

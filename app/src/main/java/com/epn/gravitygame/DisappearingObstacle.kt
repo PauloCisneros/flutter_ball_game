@@ -25,16 +25,23 @@ class BlinkingObstacle(
     }
 
     fun draw(canvas: Canvas) {
-        if (visible) {
-            val path = android.graphics.Path()
+        if (!visible) return
 
-            path.moveTo(rect.centerX(), rect.top)
-            path.lineTo(rect.left, rect.bottom)
-            path.lineTo(rect.right, rect.bottom)
-            path.close()
+        val path = android.graphics.Path()
 
-            canvas.drawPath(path, paint)
-        }
+        val topX = rect.centerX()
+        val topY = rect.top
+
+        val leftX = rect.left
+        val bottomY = rect.bottom
+        val rightX = rect.right
+
+        path.moveTo(topX, topY)
+        path.lineTo(leftX, bottomY)
+        path.lineTo(rightX, bottomY)
+        path.close()
+
+        canvas.drawPath(path, paint)
     }
 
     fun isVisible(): Boolean = visible
