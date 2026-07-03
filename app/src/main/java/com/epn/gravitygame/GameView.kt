@@ -18,33 +18,36 @@ class GameView(context: Context) : View(context) {
     private val target = Target()
     private val obstacles = mutableListOf<Obstacle>()
 
+    private val blinkingObstacles = mutableListOf<BlinkingObstacle>()
+
     private var sensorX = 0f
     private var sensorY = 0f
     private var score = 0
     private var lives = 3
     private var started = false
     private var gameOver = false
+    private var scoreFlash = 0
 
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(15, 23, 42)
+        color = Color.WHITE
         textSize = 48f
         isFakeBoldText = true
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(51, 65, 85)
+        color = Color.WHITE
         textSize = 32f
     }
 
     private val smallPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(100, 116, 139)
+        color = Color.WHITE
         textSize = 24f
     }
 
     private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(235, 255, 255, 255)
+        color = Color.argb(220, 15, 23, 42) // oscuro translúcido
     }
 
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -78,10 +81,21 @@ class GameView(context: Context) : View(context) {
 
     private fun createObstacles() {
         obstacles.clear()
+        blinkingObstacles.clear()
+
         if (width == 0 || height == 0) return
+
+        // Obstáculos normales
         obstacles.add(Obstacle(RectF(width * 0.18f, height * 0.34f, width * 0.48f, height * 0.39f)))
         obstacles.add(Obstacle(RectF(width * 0.55f, height * 0.55f, width * 0.86f, height * 0.60f)))
         obstacles.add(Obstacle(RectF(width * 0.25f, height * 0.73f, width * 0.62f, height * 0.78f)))
+
+        // Obstáculo que aparece y desaparece
+        blinkingObstacles.add(
+            BlinkingObstacle(
+                RectF(width * 0.40f, height * 0.45f, width * 0.70f, height * 0.50f)
+            )
+        )
     }
 
     private fun updateGame() {
@@ -89,6 +103,7 @@ class GameView(context: Context) : View(context) {
 
         if (Collision.circleWithCircle(ball.position, ball.radius(), target.position, target.radius())) {
             score += 10
+            scoreFlash = 20
             target.relocate(width, height)
             vibrate(35)
         }
@@ -104,6 +119,22 @@ class GameView(context: Context) : View(context) {
                 return@forEach
             }
         }
+
+        blinkingObstacles.forEach { obstacle ->
+            obstacle.update()
+
+            if (obstacle.isVisible() &&
+                Collision.circleWithRect(ball.position, ball.radius(), obstacle.rect)
+            ) {
+                lives--
+                ball.position.set(width / 2f, height / 2f)
+                vibrate(120)
+
+                if (lives <= 0) {
+                    gameOver = true
+                }
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -112,6 +143,9 @@ class GameView(context: Context) : View(context) {
         drawHeader(canvas)
         target.draw(canvas)
         obstacles.forEach { it.draw(canvas) }
+        blinkingObstacles.forEach {
+            it.draw(canvas)
+        }
         ball.draw(canvas)
 
         if (!started) drawStartOverlay(canvas)
@@ -134,10 +168,52 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun drawHeader(canvas: Canvas) {
-        canvas.drawRoundRect(24f, 24f, width - 24f, 138f, 28f, 28f, panelPaint)
-        canvas.drawText("Gravity Ball Kotlin", 48f, 72f, titlePaint)
-        canvas.drawText("Puntaje: $score    Vidas: $lives", 48f, 116f, textPaint)
-        canvas.drawText("X: ${sensorX.roundToInt()}  Y: ${sensorY.roundToInt()}", width - 230f, 116f, smallPaint)
+        // Panel superior más alto
+        canvas.drawRoundRect(
+            24f, 24f,
+            width - 24f, 160f,
+            28f, 28f,
+            panelPaint
+        )
+
+        // Título
+        canvas.drawText(
+            "Gravity Ball",
+            48f,
+            75f,
+            titlePaint
+        )
+
+        // Puntaje destacado
+        canvas.drawText(
+            "⭐ $score",
+            48f,
+            125f,
+            textPaint
+        )
+
+        // Vidas a la derecha
+        canvas.drawText(
+            "❤️ $lives",
+            width - 160f,
+            125f,
+            textPaint
+        )
+
+        // Sensor (debug más pequeño)
+        canvas.drawText(
+            "X:${sensorX.roundToInt()}  Y:${sensorY.roundToInt()}",
+            width - 280f,
+            155f,
+            smallPaint
+        )
+
+        if (scoreFlash > 0) {
+            textPaint.color = Color.YELLOW
+            scoreFlash--
+        } else {
+            textPaint.color = Color.WHITE
+        }
     }
 
     private fun drawStartOverlay(canvas: Canvas) {
