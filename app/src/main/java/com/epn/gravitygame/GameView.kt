@@ -38,6 +38,8 @@ class GameView(context: Context) : View(context) {
 
     private val effects = mutableListOf<ImpactEffect>()
 
+    private val safeZoneRadius = 200f
+
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     private val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -93,23 +95,42 @@ class GameView(context: Context) : View(context) {
         invalidate()
     }
 
+    private fun isInSafeZone(rect: RectF): Boolean {
+        val centerX = width / 2f
+        val centerY = height / 2f
+
+        val obsCenterX = rect.centerX()
+        val obsCenterY = rect.centerY()
+
+        val dx = obsCenterX - centerX
+        val dy = obsCenterY - centerY
+
+        return (dx * dx + dy * dy) < (safeZoneRadius * safeZoneRadius)
+    }
+
     private fun createObstacles() {
         obstacles.clear()
         blinkingObstacles.clear()
 
         if (width == 0 || height == 0) return
 
-        // Obstáculos normales
-        obstacles.add(Obstacle(RectF(width * 0.18f, height * 0.34f, width * 0.48f, height * 0.39f)))
-        obstacles.add(Obstacle(RectF(width * 0.55f, height * 0.55f, width * 0.86f, height * 0.60f)))
-        obstacles.add(Obstacle(RectF(width * 0.25f, height * 0.73f, width * 0.62f, height * 0.78f)))
+        val o1 = Obstacle(RectF(width * 0.18f, height * 0.34f, width * 0.48f, height * 0.39f))
+        val o2 = Obstacle(RectF(width * 0.55f, height * 0.55f, width * 0.86f, height * 0.60f))
+        val o3 = Obstacle(RectF(width * 0.25f, height * 0.73f, width * 0.62f, height * 0.78f))
 
-        // Obstáculo que aparece y desaparece
-        blinkingObstacles.add(
-            BlinkingObstacle(
-                RectF(width * 0.40f, height * 0.45f, width * 0.70f, height * 0.50f)
-            )
-        )
+        val blink = RectF(width * 0.40f, height * 0.45f, width * 0.70f, height * 0.50f)
+
+        // normales
+        listOf(o1, o2, o3).forEach {
+            if (!isInSafeZone(it.rect)) {
+                obstacles.add(it)
+            }
+        }
+
+        // blinking
+        if (!isInSafeZone(blink)) {
+            blinkingObstacles.add(BlinkingObstacle(blink))
+        }
     }
 
     private fun updateGame() {
